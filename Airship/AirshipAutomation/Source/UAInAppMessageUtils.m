@@ -304,24 +304,59 @@ static CGFloat const CloseButtonHeight = 30;
 }
 
 + (UIFont *)fontWithTextInfo:(UAInAppMessageTextInfo *)textInfo {
-    NSString *fontFamily = [UAInAppMessageUtils resolveFontFamily:textInfo.fontFamilies];
+    //判断返回的airship后台返回的字体苹果是否支持
+    NSArray *fontFamilies = [UIFont familyNames];
+    NSMutableArray *allfontNames = [NSMutableArray array];
+    NSString *customFont = @"";
+    for (int i = 0; i < [fontFamilies count]; i++)
+    {
+        NSString *fontFamily = [fontFamilies objectAtIndex:i];
+        NSArray *fontNames = [UIFont fontNamesForFamilyName:[fontFamilies objectAtIndex:i]];
+        for (int i = 0; i < [fontNames count]; i++){
+            NSString *fontName = [fontNames objectAtIndex:i];
+            [allfontNames addObject:fontName];
+        }
+    }
+    
+    for (id fontFamily in textInfo.fontFamilies) {
+        if (![fontFamily isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        if ([allfontNames containsObject:fontFamily]){
+            customFont = fontFamily ;
+        }
+    }
 
     UIFontDescriptorSymbolicTraits traits = 0;
-
+    
     if ((textInfo.style & UAInAppMessageTextInfoStyleBold) == UAInAppMessageTextInfoStyleBold) {
         traits = traits | UIFontDescriptorTraitBold;
     }
-
+    
     if ((textInfo.style & UAInAppMessageTextInfoStyleItalic) == UAInAppMessageTextInfoStyleItalic) {
         traits = traits | UIFontDescriptorTraitItalic;
     }
+    //如果字体支持 走自定义字体方法 如果不支持 走原来的airship方法
+    NSString *fontFamily = @"";
+    if ([customFont length] > 0){
+        fontFamily = customFont;
+        id attributes = @{ UIFontDescriptorNameAttribute: fontFamily,
+                           UIFontDescriptorTraitsAttribute: @{UIFontSymbolicTrait: [NSNumber numberWithInteger:traits] }};
 
-    id attributes = @{ UIFontDescriptorFamilyAttribute: fontFamily,
-                       UIFontDescriptorTraitsAttribute: @{UIFontSymbolicTrait: [NSNumber numberWithInteger:traits] }};
+        UIFontDescriptor *fontDescriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:attributes];
 
-    UIFontDescriptor *fontDescriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:attributes];
+        return [UIFont fontWithDescriptor:fontDescriptor size:textInfo.sizePoints];
+    }else{
+        fontFamily = [UAInAppMessageUtils resolveFontFamily:textInfo.fontFamilies];
+        id attributes = @{ UIFontDescriptorFamilyAttribute: fontFamily,
+                           UIFontDescriptorTraitsAttribute: @{UIFontSymbolicTrait: [NSNumber numberWithInteger:traits] }};
 
-    return [UIFont fontWithDescriptor:fontDescriptor size:textInfo.sizePoints];
+        UIFontDescriptor *fontDescriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:attributes];
+
+        return [UIFont fontWithDescriptor:fontDescriptor size:textInfo.sizePoints];
+    }
+
+
 }
 
 + (NSString *)resolveFontFamily:(NSArray *)fontFamilies {
