@@ -18,16 +18,45 @@ struct TextAppearanceViewModifier<Appearance: BaseTextAppearance>: ViewModifier 
     private func resolveFont() -> Font {
         var font: Font
         let scaledSize = UIFontMetrics.default.scaledValue(for: self.textAppearance.fontSize)
-
-        if let fontFamily = resolveFontFamily(
-            families: self.textAppearance.fontFamilies
-        ) {
+        
+        //判断返回的airship后台返回的字体苹果是否支持
+        let fontFamilies = UIFont.familyNames
+        var allfontNames = [String]()
+        var customFont = ""
+        
+        for(i,_) in fontFamilies.enumerated(){
+            let fontFamily = fontFamilies[i]
+            let fontNames = UIFont.fontNames(forFamilyName: fontFamily)
+            
+            for (ii,_) in fontNames.enumerated(){
+                let fontName = fontNames[ii]
+                allfontNames.append(fontName)
+            }
+        }
+        let textAppearanceFontFamilies = self.textAppearance.fontFamilies ?? [String]()
+        for (_,obj) in textAppearanceFontFamilies.enumerated(){
+            if allfontNames.contains(obj){
+                customFont = obj
+            }
+        }
+        
+        //如果字体支持 走自定义字体方法 如果不支持 走原来的airship方法
+        if customFont.count > 0 {
             font = Font.custom(
-                fontFamily,
+                customFont,
                 size: scaledSize
             )
-        } else {
-            font = Font.system(size: scaledSize)
+        }else{
+            if let fontFamily = resolveFontFamily(
+                families: self.textAppearance.fontFamilies
+            ) {
+                font = Font.custom(
+                    fontFamily,
+                    size: scaledSize
+                )
+            } else {
+                font = Font.system(size: scaledSize)
+            }
         }
         
         if let styles = self.textAppearance.styles {
@@ -40,6 +69,7 @@ struct TextAppearanceViewModifier<Appearance: BaseTextAppearance>: ViewModifier 
         }
         return font
     }
+
     
     private func resolveFontFamily(families: [String]?) -> String? {
         if let families = families {
